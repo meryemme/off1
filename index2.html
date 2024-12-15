@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interface Interactive avec Statistiques</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        header {
+            background-color: #255d98; /* Couleur bleu similaire */
+            position:fixed;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            font-family: Arial, sans-serif;
+            color: white;
+            z-index: 2000;
+            top: 0;          /* Aligné au bord supérieur */
+            left: 0;
+            width: 100%;     /* Prend toute la largeur */
+            height: 80px; /* Ajustez selon votre besoin */
+        }
+
+        /* Logo */
+        .header-logo {
+            display: flex;
+            align-items: center;
+        }
+        .logo {
+            width: 100px; /* Taille de logo ajustée */
+            height: auto;
+            margin-right: 15px;
+        }
+        /* Titre */
+        h1 {
+            font-size: 20px; /* Taille du titre ajustée pour plus de lisibilité */
+            color: white; /* Couleur du texte en blanc */
+            font-weight: 40; /* Poids du texte plus léger */
+            text-transform: uppercase; /* Majuscules */
+            letter-spacing: 1px; /* Espacement entre les lettres pour une meilleure lisibilité */
+            margin: 0;
+            font-family: 'Arial', sans-serif; /* Police moderne */
+            line-height: 1; /* Espacement entre les lignes pour aérer le texte */
+            text-shadow: 1px 1px 4px rgba(40, 40, 40, 0.5); /* Ombre légère et subtile */
+        }
+        a {
+            text-decoration: none; /* Supprime le soulignement des liens */
+            color: inherit; /* Assure que le lien hérite de la couleur du texte parent */
+        }
+
+        a:hover {
+            text-decoration: none; /* Supprime le soulignement au survol */
+            color: inherit; /* Conserve la couleur au survol */
+        }
+
+        /* Menu de navigation */
+        nav {
+            flex-grow: 1;
+            text-align: right;
+            display: flex;
+            justify-content: flex-end; /* Assurez-vous que les éléments sont alignés à droite */
+        }
+
+        .nav-links {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex; /* Flexbox pour aligner les éléments sur la même ligne */
+            gap: 30px;
+            align-items: center;
+        }
+
+        .nav-item {
+            position: relative;
+            white-space: nowrap; /* Empêche la coupure de ligne dans chaque élément */
+        }
+
+        /* Liens du menu */
+        .nav-item a {
+            text-decoration: none;
+            color: white;
+            font-size: 15px;
+            font-weight: 600;
+            padding: 12px 18px;
+            border-radius: 4px;
+            display: block;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        /* Effet de survol pour les liens */
+        .nav-item a:hover {
+            background-color: #0056b3; /* Fond bleu au survol */
+            color: white;
+            transform: translateY(-2px); /* Effet d'élévation */
+        }
+
+        /* Sous-menu */
+        .submenu {
+            display: none;
+            list-style: none;
+            padding: 0;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background-color: #ffffff;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            min-width: 200px;
+            border-radius: 5px;
+            z-index: 10;
+        }
+
+        /* Liens dans le sous-menu */
+        .submenu li a {
+            color: #333;
+            font-weight: 500;
+            text-decoration: none;
+            padding: 10px 20px;
+            display: block;
+            transition: color 0.3s ease, background-color 0.3s ease;
+        }
+
+        /* Effet au survol des liens dans le sous-menu */
+        .submenu li a:hover {
+            background-color: #f1f1f1;
+            color: #007bff;
+        }
+
+        /* Afficher le sous-menu au survol de la nav-item */
+        .nav-item:hover .submenu {
+            display: block;
+        }
+
+        .nav-item:hover > a {
+            color: #0056b3; /* Change la couleur du lien principal lors du survol */
+        }
+
+        /* Animation d'apparition du sous-menu */
+        .submenu {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .nav-item:hover .submenu {
+            opacity: 1;
+        }
+
+        /* Ajout d'un effet de transition douce à l'apparition du menu */
+        .nav-item:hover > a {
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(-10px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+               /* Flèches de navigation */
+               .splide__arrow {
+            background:none;
+            color: white;
+            border-radius: 50%;
+            font-size: 20px;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .splide__arrow--prev {
+            left: 15px;
+        }
+
+        .splide__arrow--next {
+            right: 15px;
+        }
+
+        /* Spinner style */
+        #loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            z-index: 2000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .spinner {
+            border: 8px solid #f3f3f3;
+            border-top: 8px solid #4e5cd8;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+        /* Style de la flèche */
+        .back-to-top {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #4e5cd8;
+            color: white;
+            border-radius: 50%;
+            padding: 10px;
+            font-size: 2rem;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            display: none; /* Par défaut, la flèche est cachée */
+        }
+
+        /* Flèche au survol */
+        .back-to-top:hover {
+            background-color: #4e5cd8;;
+        }
+        /* Styles pour la page et la carte */
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 3fr;
+            height: 100vh;
+            margin-top: 90px;
+        }
+        .sidebar {
+            background-color: #94c691;
+            color: white;
+            padding: 20px;
+            text-align: center; 
+            font-family: "Times New Roman", serif;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .sidebar h3, .sidebar h2 {
+            margin: 0 0 5px;
+            margin-bottom: 1px;
+        }
+        #map {
+            height: 100%;
+        }
+                /* Ajoutez ceci dans la section <style> de votre code */
+
+        #douars-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+            text-align: left; /* Centrer le texte dans la liste */
+        }
+
+        #douars-list li {
+            position: relative; /* Nécessaire pour que la légende se positionne par rapport à l'élément <li> */
+            padding: 15px;
+            display: flex; /* Activer Flexbox */
+            align-items: center;
+            text-align: left; 
+            background-color: #f0eee7 ;
+            margin-bottom: 4px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-size: 12px; /* Taille de la police */
+            font-weight: bold; /* Mettre le texte en gras */
+            color: #94c691; /* Couleur du texte */
+            width: 70%; /* Réduire la largeur */
+            height: 1px;
+            max-width: 300px; /* Limiter la largeur maximale des cases */
+            text-overflow: ellipsis; /* Gérer les débordements de texte */
+        }
+
+        #douars-list li:hover {
+            background-color: #6b9269; /* Changer la couleur de fond au survol */
+        }
+
+        /* Appliquer un style spécifique au texte de la légende si nécessaire */
+        .dynamic-legend {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background-color: #6b9269;
+            padding: 10px;
+            border-radius: 5px;
+            width: calc(100% - 20px);
+            z-index: 10;
+            box-shadow: 0 4px 6px white;
+            text-align: left; /* Assurez-vous que la légende soit alignée à gauche dans la liste */
+        }
+
+        .dynamic-legend ul {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .dynamic-legend ul li {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+            color: white;
+        }
+
+        .dynamic-legend .legend-color {
+            display: inline-block;
+            width: 15px;
+            height: 15px;
+            margin-right: 10px;
+            border-radius: 50%;
+        }
+        #statistics {
+            background-color: #3e4e58;
+            padding: 10px;
+            border-radius: 8px;
+            color: white;
+        }
+
+        #statistics canvas {
+            width: 100% !important;
+            height: auto !important;
+        }
+        
+        .container1 {
+            display: flex;
+            justify-content: flex-start; /* Alignement de gauche pour le texte */
+            align-items: flex-start;
+            gap: 50px; /* Espacement entre le texte et le graphique */
+            padding: 20px; /* Espacement interne pour améliorer l'apparence */
+        }
+
+        .text1 {
+            max-width: 400px; /* Limiter la largeur de la zone de texte */
+            font-size: 18px;
+            color: #000000;
+        }
+
+        .text1 h2 {
+            font-size: 24px; /* Taille du titre */
+            color: #336f43; /* Couleur du titre */
+            margin-bottom: 15px; /* Espacement sous le titre */
+        }
+
+        .chart-container1 {
+            width: 500px; /* Largeur du graphique */
+            height: 300px; /* Hauteur du graphique */
+        }
+
+        .chart-container1 canvas {
+            width: 100% !important;
+            height: auto !important;
+        }
+
+        @media (max-width: 768px) {
+        }
+
+        /* Style général du footer */
+        .footer {
+            background-color: #255d98;
+            color: white;
+            width: 100%;
+            padding: 40px 20px;
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+
+        .footer-content {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        /* Style pour chaque section du footer */
+        .footer-left, .footer-links, .footer-contact {
+            flex: 1;
+            padding: 10px;
+            margin: 10px;
+            max-width: 300px;
+        }
+
+        .footer-left h3, .footer-links h4, .footer-contact h4 {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+        }
+
+        .footer-left p, .footer-contact p {
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+
+        /* Liste de liens utiles */
+        .footer-links ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .footer-links li {
+            margin: 10px 0;
+        }
+
+        .footer-links a {
+            color: #d7d29f;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .footer-links a:hover {
+            color: #d9d1d1c7;
+        }
+
+        /* Style du bas de page (footer-bottom) */
+        .footer-bottom {
+            background-color: #255d98;
+            padding: 20px;
+            font-size: 1rem;
+            color: #ecf0f1;
+        }
+
+        .footer-bottom p {
+            margin: 5px 0;
+        }
+
+        /* Responsive design pour les petits écrans */
+        @media (max-width: 768px) {
+            .footer-content {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+
+
+
+    </style>
+
+    <script src="delemitationelhaouz.geojson" type="application/javascript"></script>
+    <script src="AitOthmane.geojson" type="application/javascript"></script>
+    <script src="Adassi.geojson" type="application/javascript"></script>
+    <script src="Amizmiz.geojson" type="application/javascript"></script>
+    <script src="Tahnaout.geojson" type="application/javascript"></script>
+    <script src="Asni.geojson" type="application/javascript"></script>
+    <script src="Talatnyaaqoub.geojson" type="application/javascript"></script>
+    <script src="Assaki.geojson" type="application/javascript"></script>
+    <script src="Adebdi.geojson" type="application/javascript"></script>
+    <script src="epicentre.geojson" type="application/javascript"></script>
+    <script src="DouarAdassi.geojson"type="application/javascript"></script>
+    <script src="DouarAdebdi.geojson"type="application/javascript"></script>
+    <script src="Douaraitothmane.geojson"type="application/javascript"></script>
+    <script src="DouarAmizmiz.geojson"type="application/javascript"></script>
+    <script src="DouarAssaki.geojson"type="application/javascript"></script>
+    <script src="DouarAsni.geojson"type="application/javascript"></script>
+    <script src="DouarTahnaout.geojson"type="application/javascript"></script>
+    <script src="DouarTalatnyaaqoub.geojson"type="application/javascript"></script>
+    <script src="Camp_amizmiz.geojson"type="application/javascript"></script>
+    <script src="Camp_Asni.geojson"type="application/javascript"></script>
+    <script src="Camp_tahnaout.geojson"type="application/javascript"></script>
+    <script src="Camp_talat_nyaaqoub.geojson"type="application/javascript"></script>
+    
+</head>
+<body>
+    <!-- Spinner -->
+    <div id="loading">
+        <div class="spinner"></div>
+    </div>
+    <script>
+        // Simuler un chargement long
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                document.getElementById('loading').style.display = 'none';
+            }, 3000); // 3 secondes pour tester visuellement
+        });
+    </script>
+    <header>
+        <div class="header-logo">
+            <img src="C:\Users\ThinkPad\Desktop\haouz\logo_S.png" alt="Logo" class="logo">
+            <a href="C:/Users/ThinkPad/Desktop/haouz/oooooooo.html">
+            <h1>Al Haouz en Carte : </br> Explorer l'Impact du Séisme sur les Bâtiments</h1>
+            </a>
+        </div>
+        <nav>
+            <ul class="nav-links">
+                <li class="nav-item">
+                    <a href="C:\Users\ThinkPad\Downloads\Nouveau dossier\plateforme2originale.html">Géoportail d'Al Haouz</a>
+                </li>
+                <li class="nav-item">
+                    <a href="C:/Users/ThinkPad/Desktop/haouz/services.html">Services</a>
+                    <ul class="submenu">
+                        <li><a href="C:/Users/ThinkPad/Desktop/haouz/services.html">Analyse des Bâtiments</a></li>
+                        <li><a href="C:/Users/ThinkPad/Desktop/haouz/services.html">Cartographie Interactive</a></li>
+                        <li><a href="C:/Users/ThinkPad/Desktop/haouz/services.html">Statistiques Détaillées</a></li>
+                    </ul>
+                </li>
+                <li class="nav-item">
+                    <a href="C:/Users/ThinkPad/Desktop/haouz/Articles.html">Articles</a>
+                </li>
+                <li class="nav-item"><a href="C:/Users/ThinkPad/Desktop/haouz/contact.html">À Propos de Nous</a></li>
+            </ul>
+        </nav>
+    </header>
+    <div class="back-to-top">
+        ↑
+    </div>
+    <script>
+        // Lorsque l'utilisateur défile
+    window.onscroll = function () {
+        var backToTopButton = document.querySelector('.back-to-top');
+
+        // Vérifier si on a défilé assez bas pour afficher la flèche
+        if (document.body.scrollTop > 200 || document.documentElement.scrollTop > 200) {
+            backToTopButton.style.display = "block"; // Afficher la flèche
+            backToTopButton.style.opacity = 1; // Rendre la flèche visible
+        } else {
+            backToTopButton.style.display = "none"; // Cacher la flèche quand on est en haut
+        }
+    };
+
+    // Lorsque l'on clique sur la flèche
+    document.querySelector('.back-to-top').addEventListener('click', function () {
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth' // Défilement fluide jusqu'en haut
+        });
+    });
+    </script>
+
+    <div class="container">
+        <div class="sidebar">
+            <h2>Douars</h2>
+            <ul id="douars-list">
+                <!-- Les éléments des douars seront ajoutés ici par JavaScript -->
+            </ul>
+             
+            <!-- Conteneur des boutons -->
+             <div id="douar-buttons">
+                <!-- Les boutons des douars seront ajoutés ici -->
+            </div>
+
+            <!-- Conteneur du graphique -->
+            <div id="chart-container">
+                <canvas id="chart"></canvas>
+            </div>
+            
+        </div>
+        <div id="map"></div>
+    </div>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+        // Liste des douars avec leurs noms et couches correspondantes
+        const douars = [
+            { name: "Ait Othmane", layerName: "aitothmane" },
+            { name: "Talat Nyaaqoub", layerName: "talatnyaaqoub" },
+            { name: "Assaki", layerName: "assaki" },
+            { name: "Adebdi", layerName: "adebdi" },
+            { name: "Amizmiz", layerName: "amizmiz" },
+            { name: "Asni", layerName: "asni" },
+            { name: "Tahnouat", layerName: "tahnouat" },
+            { name: "Adassi", layerName: "adassi" },
+        ];
+
+        let chart = new Chart(document.getElementById("chart"), {
+            type: 'bar',
+            data: {
+                labels: ['Destroyed', 'Damaged', 'Possibly damaged'],
+                datasets: [{
+                    label: 'Statistiques',
+                    data: [0, 0, 0],  // Valeurs initiales
+                    backgroundColor: ['#FF0000', '#FFFF00', '#0000FF'],  // Couleurs pour chaque catégorie
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        labels: {
+                            generateLabels: function (chart) {
+                                const data = chart.data.datasets;
+                                return data.map(dataset => ({
+                                    text: dataset.label, // Affiche uniquement le texte
+                                    fillStyle: null, // Désactive le rectangle coloré
+                                    strokeStyle: null,
+                                    hidden: false,
+                                    index: 0,
+                                }));
+                            },
+                        },
+                    },
+                },
+                scales: {
+                    x: {
+                        ticks: {
+                            color: '#f0eee7', // Change la couleur des ticks de l'axe X
+                        },
+                    },
+                    y: {
+                        ticks: {
+                            color: '#f0eee7', // Change la couleur des ticks de l'axe Y
+                        },
+                        beginAtZero: true,
+                    },
+                },
+            },
+        });
+
+
+        // Fonction pour mettre à jour le graphique selon le douar sélectionné
+        function updateChart(layerName) {
+            const geojsonData = window[layerName];  // Accéder aux données GeoJSON du douar
+            const situationCount = { "Destroyed": 0, "Damaged": 0, "Possibly damaged": 0 };
+
+            geojsonData.features.forEach(feature => {
+                const situation = feature.properties.Situation;
+                if (situationCount[situation] !== undefined) {
+                    situationCount[situation]++;
+                }
+            });
+
+            chart.data.datasets[0].data = [
+                situationCount["Destroyed"],
+                situationCount["Damaged"],
+                situationCount["Possibly damaged"]
+            ];
+            chart.update();
+        }
+
+        // Fonction pour créer la légende dynamique pour chaque douar
+        function createDouarListItem(douar, geojsonData) {
+            const li = document.createElement("li");
+            li.dataset.layer = douar.layerName;
+            li.innerHTML = `${douar.name}`;
+
+            // Générer la légende dynamique en fonction des catégories présentes
+            const legendContainer = document.createElement('div');
+            legendContainer.classList.add('dynamic-legend');
+            
+            const damageCategories = ["Destroyed", "Damaged", "Possibly damaged"];
+            const categoriesInData = new Set();
+
+            // Analyser les données GeoJSON pour déterminer quelles catégories sont présentes
+            geojsonData.features.forEach(feature => {
+                const damage = feature.properties.Situation;
+                if (damageCategories.includes(damage)) {
+                    categoriesInData.add(damage);
+                }
+            });
+
+            // Ajouter les catégories présentes à la légende
+            const ul = document.createElement('ul');
+            categoriesInData.forEach(damage => {
+                const li = document.createElement('li');
+                const color = {
+                    "Destroyed": "#FF0000",
+                    "Damaged": "#FFFF00",
+                    "Possibly damaged": "#0000FF"
+                }[damage];
+
+                li.innerHTML = `<span class="legend-color" style="background-color: ${color};"></span> ${damage}`;
+                ul.appendChild(li);
+            });
+
+            if (ul.children.length > 0) {
+                legendContainer.appendChild(ul);
+                li.appendChild(legendContainer);
+            }
+
+            return li;
+        }
+
+        // Remplir la liste des douars dans le DOM
+        const douarsList = document.getElementById("douars-list");
+        douars.forEach(douar => {
+            // On récupère les données GeoJSON pour chaque douar avant de créer la légende
+            const geojsonData = window[douar.layerName]; // Assurez-vous que vos données GeoJSON sont chargées dans les variables correspondantes
+            douarsList.appendChild(createDouarListItem(douar, geojsonData));
+        });
+
+        // Initialiser la carte
+        const map = L.map('map').setView([31.341728, -7.917035], 8);
+
+        // Ajouter une couche OpenStreetMap
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Créer un groupe pour regrouper les couches
+        const geojsonLayers = {};
+
+        // Fonction pour ajouter une couche GeoJSON
+        function addGeoJSONLayerByClassification(geojsonData, layerName) {
+            const layer = L.geoJSON(geojsonData, {
+                pointToLayer: (feature, latlng) => {
+                    const damage = feature.properties.Situation;
+                    const color = {
+                        "Destroyed": "#FF0000",
+                        "Damaged": "#FFFF00",
+                        "Possibly damaged": "#0000FF"
+                    }[damage] || "#000000";
+                    return L.circleMarker(latlng, {
+                        radius: 4,
+                        fillColor: color,
+                        color: color,
+                        weight: 1,
+                        opacity: 1,
+                        fillOpacity: 0.8
+                    });
+                },
+                onEachFeature: (feature, layer) => {
+                    const popupContent = `<p><strong>Douar:</strong> ${layerName}<br><strong>Dommages:</strong> ${feature.properties.Situation || 'N/A'}</p>`;
+                    layer.bindPopup(popupContent);
+                }
+            });
+
+            geojsonLayers[layerName] = layer;
+            layer.addTo(map);
+        }
+
+        // Ajouter les couches GeoJSON pour chaque douar
+        addGeoJSONLayerByClassification(aitothmane, "aitothmane");
+        addGeoJSONLayerByClassification(talatnyaaqoub, "talatnyaaqoub");
+        addGeoJSONLayerByClassification(adassi, "adassi");
+        addGeoJSONLayerByClassification(adebdi, "adebdi");
+        addGeoJSONLayerByClassification(assaki, "assaki");
+        addGeoJSONLayerByClassification(tahnouat, "tahnouat");
+        addGeoJSONLayerByClassification(amizmiz, "amizmiz");
+        addGeoJSONLayerByClassification(asni, "asni");
+
+        // Centrer la carte sur toutes les couches visibles
+        map.fitBounds(Object.values(geojsonLayers).map(layer => layer.getBounds()).reduce((acc, bounds) => acc.extend(bounds), L.latLngBounds()));
+
+        document.getElementById("douars-list").addEventListener("click", (e) => {
+            const li = e.target.closest("li");
+            if (li) {
+                const legend = li.querySelector(".dynamic-legend");
+                if (legend) {
+                    const isVisible = legend.style.display === "block";
+                    document.querySelectorAll(".dynamic-legend").forEach(l => l.style.display = "none");
+                    legend.style.display = isVisible ? "none" : "block";
+                }
+
+                // Mettre à jour le graphique
+                const layerName = li.dataset.layer;
+                if (layerName && geojsonLayers[layerName]) {
+                    updateChart(layerName);  // Mettre à jour le graphique pour ce douar
+                    map.fitBounds(geojsonLayers[layerName].getBounds());  // Centrer la carte sur le douar
+                }
+            }
+        });
+
+        
+        // Fonction pour ajouter un GeoJSON à la carte avec des styles personnalisés
+        function addGeoJSONLayer(geojsonData, map, color, popupText) {
+            L.geoJSON(geojsonData, {
+                style: {
+                    color: color,          // Couleur du contour
+                    weight: 2,             // Poids du contour
+                    opacity: 0.5,            // Opacité du contour
+                    fillOpacity: 0      // Opacité du remplissage
+                }
+            }).addTo(map).bindPopup(popupText); // Ajouter à la carte et afficher le popup
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Ajouter les polygones à la carte en appelant la fonction addGeoJSONLayer()
+            addGeoJSONLayer(DouarAdassi, map, 'blue', 'Douar Adassi');
+            addGeoJSONLayer(DouarAdebdi, map, 'blue', 'Douar Adebdi');
+            addGeoJSONLayer(Douaraitothmane, map, 'blue','Douar Ait Othmane');
+            addGeoJSONLayer(DouarAmizmiz, map, 'blue',  'Douar Amizmiz');
+            addGeoJSONLayer(DouarAssaki, map, 'blue', 'Douar Assaki');
+            addGeoJSONLayer(DouarAsni, map, 'blue','Douar Asni');
+            addGeoJSONLayer(DouarTahnaout, map, 'blue', 'Douar Tahnaout');
+            addGeoJSONLayer(DouarTalatnyaaqoub, map, 'blue', 'Douar Talat Nyaaqoub');
+        });
+        L.geoJSON(delim, {
+            style: {
+                color: 'blue',
+                weight: 2,
+                opacity: 1,
+                fillOpacity: 0
+            }
+        }).addTo(map).bindPopup('Délimitation Al Haouz');
+    </script>
+
+    <script>
+    function addCampsLayer(geojsonData, layerName) {
+        const campLayer = L.geoJSON(geojsonData, {
+            pointToLayer: (feature, latlng) => {
+                return L.circleMarker(latlng, {
+                    radius: 6,  // Taille des cercles pour les camps
+                    fillColor: "#00FF00",  // Vert pour les camps
+                    color: "#006600",  // Contour plus foncé
+                    weight: 1,
+                    opacity: 1,
+                    fillOpacity: 0.8
+                });
+            },
+            onEachFeature: (feature, layer) => {
+                const popupContent = `<p><strong>Camp:</strong> ${feature.properties.Name || "N/A"}<br>
+                                    <strong>Description:</strong> ${feature.properties.Description || "N/A"}</p>`;
+                layer.bindPopup(popupContent);
+            }
+        });
+
+        geojsonLayers[layerName] = campLayer; // Ajouter à l'objet des couches
+        campLayer.addTo(map); // Ajouter la couche à la carte
+    }
+    addCampsLayer(camptalatnyaaqoub, "camptalatnyaaqoub");
+    addCampsLayer(campamizmiz, "campamizmiz");
+    addCampsLayer(campasni, "campasni");
+    addCampsLayer(camptahnaout, "camptahnaout");
+    function createDouarListItem(douar, geojsonData) {
+        const li = document.createElement("li");
+        li.dataset.layer = douar.layerName;
+        li.dataset.campLayer = douar.campLayerName;
+        li.innerHTML = `${douar.name}`;
+
+        const legendContainer = document.createElement('div');
+        legendContainer.classList.add('dynamic-legend');
+        // Code pour ajouter la légende des douars, déjà présent...
+
+        const showCampsButton = document.createElement("button");
+        showCampsButton.textContent = "Afficher les Camps";
+        showCampsButton.className = "show-camps-button";
+        showCampsButton.addEventListener("click", () => {
+            const campLayer = geojsonLayers[douar.campLayerName];
+            if (campLayer) {
+                map.fitBounds(campLayer.getBounds()); // Centrer sur les camps
+            }
+        });
+
+        li.appendChild(showCampsButton);
+        return li;
+    }
+    function updateChartForCamps(campLayerName) {
+        const geojsonData = window[campLayerName]; // Accéder aux données GeoJSON des camps
+        const campStats = { "Type1": 0, "Type2": 0, "Type3": 0 }; // Adaptez les catégories
+
+        geojsonData.features.forEach(feature => {
+            const campType = feature.properties.Type; // Exemple de propriété
+            if (campStats[campType] !== undefined) {
+                campStats[campType]++;
+            }
+        });
+
+        chart.data.datasets[0].data = [
+            campStats["Type1"],
+            campStats["Type2"],
+            campStats["Type3"]
+        ];
+        chart.update();
+    }
+    document.getElementById("douars-list").addEventListener("click", (e) => {
+        const li = e.target.closest("li");
+        if (li) {
+            const campLayerName = li.dataset.campLayer;
+            if (campLayerName && geojsonLayers[campLayerName]) {
+                map.fitBounds(geojsonLayers[campLayerName].getBounds()); // Centrer sur les camps
+                updateChartForCamps(campLayerName); // Mettre à jour le graphique pour les camps
+            }
+        }
+    });
+
+    </script>
+    <div class="container1">
+        <!-- Phrase explicative -->
+        <div class="text1">
+            <h2>Nombre des camps dans chaque Douar </h2>
+            <p>
+                Voici un graphique montrant le nombre de camps présents dans chaque douar. 
+                Le nombre de camps est représenté par des barres. Vous pouvez visualiser 
+                la répartition des camps par douar.
+            </p>
+        </div>
+
+        <!-- Conteneur du graphique -->
+        <div class="chart-container1">
+            <canvas id="campsChart" width="300" height="200"></canvas>
+        </div>
+    </div>
+    <script>
+        const douarCampsData = [
+            { name: "Talat Nyaaqoub", camps: camptalatnyaaqoub.features.length },
+            { name: "Amizmiz", camps: campamizmiz.features.length },
+            { name: "Asni", camps: campasni.features.length },
+            { name: "Tahnaout", camps: camptahnaout.features.length },
+        ];
+
+        // Extraire les noms des douars et le nombre de camps
+            const labels = douarCampsData.map(d => d.name); // Noms des douars
+            const campsData = douarCampsData.map(d => d.camps); // Nombre de camps
+
+            // Configuration du graphique
+            const ctx = document.getElementById('campsChart').getContext('2d');
+            const campsChart = new Chart(ctx, {
+                type: 'bar', // Type de graphique
+                data: {
+                    labels: labels, // Noms des douars
+                    datasets: [
+                        {
+                            label: 'Number of Camps', // Légende
+                            data: campsData, // Données pour chaque douar
+                            backgroundColor: '#32CD32', // Couleur des barres (vert)
+                        },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top', // Position de la légende
+                        },
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Douars', // Label de l'axe X
+                            },
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Number of Camps', // Label de l'axe Y
+                            },
+                            beginAtZero: true, // Commencer l'axe Y à zéro
+                        },
+                    },
+                },
+            });
+
+    </script>
+
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-left">
+                <h3>IHM <br> Société Topographique Since 2016</h3>
+                <p class="footer-address">
+                    Al Haouz en carte <br>
+                    Explorer l'Impact du Séisme sur les Bâtiments
+                </p>
+            </div>
+            <div class="footer-links">
+                <h4>Des liens utiles</h4>
+                <ul>
+                    <li><a href="C:\Users\ThinkPad\Downloads\Nouveau dossier\plateforme2originale.html">Géoportail</a></li>
+                    <li><a href="services.html">Services</a></li>
+                    <li><a href="Articles.html">Articles</a></li>
+                    <li><a href="contact.html">À Propos de Nous</a></li>
+                </ul>
+            </div>
+            <div class="footer-contact">
+                <h4>Adresse</h4>
+                <p>Avenue Al Amane, Hay Tilila </p>
+                <p>AGADIR, MAROC</p>
+                <p>+212 520-363-688</p>
+                <p>+212 661-268-738</p>
+                <a href="mailto:IHMSARL@gmail.com">IHMSARL@gmail.com</a>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>© 2024 Géoportail El Haouz. Tous droits réservés à IHM sarl</p>
+        </div>
+    </footer>
+</body>
+</html>

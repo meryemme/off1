@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carte Leaflet avec PostGIS</title>
+    <!-- Inclure Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        /* Style pour la carte */
+        #map {
+            height: 100vh; /* La carte occupe toute la hauteur de l'écran */
+            width: 100%;   /* La carte occupe toute la largeur de l'écran */
+        }
+
+        /* Style des boutons */
+        .controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+        }
+
+        .controls button {
+            display: block;
+            margin-bottom: 5px;
+            padding: 5px 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        .controls button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <!-- Conteneur pour la carte -->
+    <div id="map"></div>
+
+    <!-- Contrôles pour zoomer sur chaque région -->
+    <div class="controls">
+        <button onclick="zoomToRegion('DouarAdassi')">Zoom sur Douar Adassi</button>
+        <button onclick="zoomToRegion('DouarAdebdi')">Zoom sur Douar Adebdi</button>
+        <button onclick="zoomToRegion('DouarAsni')">Zoom sur Douar Asni</button>
+        <button onclick="zoomToRegion('DouarAssaki')">Zoom sur Douar Assaki</button>
+        <button onclick="zoomToRegion('DouarTalatnyaaqoub')">Zoom sur Douar Talat_nyaaqoub</button>
+        <button onclick="zoomToRegion('DouarTahnaout')">Zoom sur Douar Tahnouat</button>
+        <button onclick="zoomToRegion('DouarAmizmiz')">Zoom sur Douar Amizmiz</button>
+    </div>
+
+    <!-- Inclure Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Script principal -->
+    <script>
+        // Initialiser la carte Leaflet
+        const map = L.map('map').setView([31.354627, -8.061163], 10); // Coordonnées par défaut (par exemple Marrakech)
+
+        // Ajouter une couche de tuiles OpenStreetMap
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Variable pour stocker toutes les couches GeoJSON
+        const layers = {};
+
+        // Fonction pour charger les données GeoJSON depuis l'API
+        function loadGeoJSON(tableName) {
+            const apiUrl = `http://localhost:3000/geojson/${tableName}`; // URL de l'API
+
+            // Charger les données GeoJSON depuis l'API
+            fetch(apiUrl)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Erreur HTTP: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Ajouter la couche GeoJSON à la carte et la stocker dans l'objet `layers`
+                    layers[tableName] = L.geoJSON(data, {
+                        pointToLayer: function (feature, latlng) {
+                            return L.circleMarker(latlng, {
+                                radius: 4, // Taille du point
+                                fillColor: "blue", // Couleur de remplissage
+                                color: "white", // Couleur du contour
+                                weight: 1, // Épaisseur du contour
+                                opacity: 1, // Opacité
+                                fillOpacity: 0.6 // Opacité du remplissage
+                            });
+                        }
+                    }).addTo(map);
+                })
+                .catch(error => {
+                    console.error('Erreur lors du chargement des données:', error);
+                    alert("Une erreur s'est produite lors du chargement des données. Veuillez réessayer.");
+                });
+        }
+
+        // Charger toutes les couches GeoJSON au démarrage
+        const allRegions = [
+            'DouarAdassi', 'DouarAdebdi', 'DouarAsni', 'DouarAssaki', 'DouarTalatnyaaqoub', 
+            'DouarTahnaout', 'DouarAmizmiz'
+        ];
+
+        allRegions.forEach(region => loadGeoJSON(region));
+
+        // Fonction pour zoomer et centrer la carte sur un Douar spécifique
+        function zoomToRegion(regionName) {
+            if (layers[regionName]) {
+                // Zoomer et centrer sur le Douar spécifié
+                map.fitBounds(layers[regionName].getBounds());
+            } else {
+                alert(`Les données pour ${regionName} ne sont pas encore chargées.`);
+            }
+        }
+    </script>
+</body>
+</html>

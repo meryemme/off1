@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carte Leaflet avec PostGIS</title>
+    <!-- Inclure Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        /* Style pour la carte */
+        #map {
+            height: 100vh; /* La carte occupe toute la hauteur de l'écran */
+            width: 100%;   /* La carte occupe toute la largeur de l'écran */
+        }
+
+        /* Style des boutons */
+        .controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+        }
+
+        .controls button {
+            display: block;
+            margin-bottom: 5px;
+            padding: 5px 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        .controls button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <!-- Conteneur pour la carte -->
+    <div id="map"></div>
+
+    <!-- Contrôles pour changer de table -->
+    <div class="controls">
+        <button onclick="loadGeoJSON('Adassi')">Afficher Adassi</button>
+        <button onclick="loadGeoJSON('Adebdi')">Afficher Adebdi</button>
+        <button onclick="loadGeoJSON('Asni')">Afficher Asni</button>
+        <button onclick="loadGeoJSON('Assaki')">Afficher Assaki</button>
+        <button onclick="loadGeoJSON('Talat_nyaaqoub')">Afficher Talatnyaaqoub</button>
+        <button onclick="loadGeoJSON('Tahnouat')">Afficher Tahnouat</button>
+        <button onclick="loadGeoJSON('Amizmiz')">Afficher Amizmiz</button>
+        <button onclick="loadGeoJSON('AitOthmane')">Afficher AitOthmane</button>
+        <button onclick="loadGeoJSON('DouarTalatnyaaqoub')">Afficher Douar Talat_nyaaqoub</button>
+        <button onclick="loadGeoJSON('DouarTahnouat')">Afficher Douar Tahnouat</button>
+        <button onclick="loadGeoJSON('DouarAssaki')">Afficher Douar Assaki</button>
+        <button onclick="loadGeoJSON('DouarAsni')">Afficher Douar Asni</button>
+        <button onclick="loadGeoJSON('DouarAmizmiz')">Afficher Douar Asni</button>
+        <button onclick="loadGeoJSON('DouarAdassi')">Afficher Douar Adassi</button>
+        <button onclick="loadGeoJSON('Douaraitothmane')">Afficher Douar aitothmane</button>
+        <button onclick="loadGeoJSON('DouarAdebdi')">Afficher Douar Adebdi</button>
+        <button onclick="loadGeoJSON('Camp_talat_nyaaqoub')">Afficher Camps de Talat_nyaaqoub</button>
+        <button onclick="loadGeoJSON('Camp_amizmiz')">Afficher Camps de Amizmiz</button>
+        <button onclick="loadGeoJSON('Camp_Asni')">Afficher Camps de Asni</button>
+        <button onclick="loadGeoJSON('Camp_tahnaout')">Afficher Camps de Tahnouat</button>
+        <button onclick="loadGeoJSON('voietouches_Amizmiz')">Afficher les voies touchees de Amizmiz</button>
+        <button onclick="loadGeoJSON('voietouches_talat_nayaaqoub')">Afficher les voies touchees de Talat_nyaaqoub</button>
+        <button onclick="loadGeoJSON('voietouches_tahnaout')">Afficher les voies touchees de Tahnouat</button>
+        <button onclick="loadGeoJSON('epicentre')">Epicentre</button>
+        <button onclick="loadGeoJSON('delimitationelhaouz')">Delimitation d'Elhaouz</button>
+      
+
+    <!-- Inclure Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Script principal -->
+    <script>
+        // Initialiser la carte Leaflet
+        const map = L.map('map').setView([31.354627, -8.061163], 10); // Coordonnées par défaut (par exemple Marrakech)
+
+        // Ajouter une couche de tuiles OpenStreetMap
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Variable pour stocker la couche GeoJSON actuelle
+        let currentLayer = null;
+
+        // Fonction pour charger des données GeoJSON depuis l'API
+        function loadGeoJSON(tableName) {
+            const apiUrl = `http://localhost:3000/geojson/${tableName}`; // URL de l'API
+
+            // Charger les données GeoJSON depuis l'API
+            fetch(apiUrl)
+                .then(response => response.json())
+                .then(data => {
+                    // Supprimer la couche précédente si elle existe
+                    if (currentLayer) {
+                        map.removeLayer(currentLayer);
+                    }
+
+                    // Ajouter une nouvelle couche GeoJSON à la carte
+                    currentLayer = L.geoJSON(data, {
+                        pointToLayer: function (feature, latlng) {
+                            // Créer un cercle simple pour chaque point (vous pouvez aussi utiliser un autre type comme un marker)
+                            return L.circleMarker(latlng, {
+                                radius: 4, // Taille du point
+                                fillColor: "blue", // Couleur de remplissage
+                                color: "white", // Couleur du contour
+                                weight: 1, // Épaisseur du contour
+                                opacity: 1, // Opacité
+                                fillOpacity: 0.6 // Opacité du remplissage
+                            });
+                        }
+                    }).addTo(map);
+
+                    // Zoomer sur les entités chargées
+                    map.fitBounds(currentLayer.getBounds());
+                })
+                .catch(error => console.error('Erreur lors du chargement des données:', error));
+        }
+        // Charger les bâtiments par défaut au démarrage
+        loadGeoJSON('epicentre');
+    </script>
+</body>
+</html>
